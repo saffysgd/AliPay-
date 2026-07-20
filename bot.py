@@ -180,7 +180,12 @@ class States(StatesGroup):
 @router.message(Command("start"))
 async def start(message: Message):
     await message.answer(
-        "🇨🇳 <b>AliPay Agent</b>\nДобро пожаловать!\n\nВыберите действие:",
+        "🇨🇳 <b>ALIPAY AGENT</b>\n\n"
+        "💳 Пополнение AliPay и WeChat Pay\n"
+        "⚡ Онлайн обмен RUB → CNY\n"
+        "🔒 Быстро • Безопасно • Надёжно\n\n"
+        "⏱ Среднее время обработки: <b>1–5 минут</b>\n\n"
+        "👇 Выберите действие:",
         reply_markup=menu_kb(),
         parse_mode="HTML",
     )
@@ -190,7 +195,12 @@ async def start(message: Message):
 async def back(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.message.edit_text(
-        "🇨🇳 <b>AliPay Agent</b>\nДобро пожаловать!\n\nВыберите действие:",
+        "🇨🇳 <b>ALIPAY AGENT</b>\n\n"
+        "💳 Пополнение AliPay и WeChat Pay\n"
+        "⚡ Онлайн обмен RUB → CNY\n"
+        "🔒 Быстро • Безопасно • Надёжно\n\n"
+        "⏱ Среднее время обработки: <b>1–5 минут</b>\n\n"
+        "👇 Выберите действие:",
         reply_markup=menu_kb(),
         parse_mode="HTML",
     )
@@ -209,29 +219,53 @@ async def support(callback: CallbackQuery):
 
 @router.callback_query(F.data == "rate")
 async def rate(callback: CallbackQuery):
-    await callback.answer("⏳ Получаю курс...")
+    await callback.answer("⏳ Обновляю курс...")
+
     rates = await get_rates()
     if not rates:
         await callback.message.edit_text(
-            "❌ Курс недоступен. Попробуйте позже.",
+            "❌ Курс временно недоступен.",
             reply_markup=back_kb(),
             parse_mode="HTML",
         )
         return
 
     rub, cny = rates
-    cost = rub / cny
-    final = Calculator.rate(rub, cny, MARGIN, FIXED_FEE)
+
+    client_rate = Calculator.rate(rub, cny, MARGIN, FIXED_FEE)
+
+    # Можно немного округлить коммерческий курс USDT
+    usdt_rub = round(rub + 0.5, 2)
+    usdt_cny = round(cny + 0.05, 2)
 
     text = (
-        f"📊 <b>Курс валют</b> — {datetime.now().strftime('%d.%m.%Y %H:%M')}\n\n"
-        f"🇨🇳 CNY\n├ CNY - RUB: {cost:.2f}\n└ {cost*1000:.0f} RUB = 1000 CNY\n\n"
-        f"💵 USDT\n├ USDT - CNY: {cny:.2f}\n└ {1000/cny:.0f} USDT = 1000 CNY\n\n"
-        f"💳 USDT ПОКУПКА\n├ USDT: {rub:.2f}\n└ {rub*1000:.0f} RUB = 1000 USDT\n\n"
-        f"<b>Итог: {final:.2f} ₽/CNY</b>"
-    )
-    await callback.message.edit_text(text, reply_markup=back_kb(), parse_mode="HTML")
+        f"💹 <b>Текущий курс</b>\n"
+        f"🕒 {datetime.now().strftime('%d.%m.%Y %H:%M')}\n\n"
 
+        f"━━━━━━━━━━━━━━\n\n"
+
+        f"🇨🇳 <b>CNY</b>\n\n"
+        f"├ 1 CNY = <b>{client_rate:.2f} ₽</b>\n"
+        f"└ 1000 CNY = <b>{client_rate*1000:,.0f} ₽</b>\n\n"
+
+        f"💵 <b>USDT</b>\n\n"
+        f"├ 1 USDT = <b>{usdt_cny:.2f} CNY</b>\n"
+        f"└ {1000/usdt_cny:.0f} USDT = <b>1000 CNY</b>\n\n"
+
+        f"💳 <b>USDT</b>\n\n"
+        f"├ 1 USDT = <b>{usdt_rub:.2f} ₽</b>\n"
+        f"└ 1000 USDT = <b>{usdt_rub*1000:,.0f} ₽</b>\n\n"
+
+        f"━━━━━━━━━━━━━━\n\n"
+
+        f"⏳ Курс обновляется каждые 2 минуты."
+    )
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=back_kb(),
+        parse_mode="HTML",
+    )
 
 @router.callback_query(F.data == "topup")
 async def topup(callback: CallbackQuery, state: FSMContext):
