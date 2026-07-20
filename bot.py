@@ -167,7 +167,7 @@ def calc_kb():
     ])
 
 
-class States:
+class States(StatesGroup):
     amount = State()
     uid = State()
     receipt = State()
